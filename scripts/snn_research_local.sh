@@ -106,6 +106,16 @@ smoke() {
     -q
 }
 
+runtime_tests() {
+  activate_env
+  assert_runtime_ready
+  log "Running prepared-runtime plasticity checks"
+  python -m pytest \
+    tests/test_doom_learning_v6.py \
+    tests/test_doom_learning_v6_eligibility_model.py \
+    -q
+}
+
 assert_runtime_ready() {
   [[ -f outputs/doom/malecns_v1/graph.npz ]] || die "Prepared graph missing. Run prepare first."
   [[ -f outputs/doom/libneural.so || -f outputs/doom/libneural.dylib ]] || die "Native kernel missing. Run prepare first."
@@ -159,12 +169,35 @@ baseline() {
     return 0
   fi
 
-  log "[$run_id] Stage 2/2: strict differential conditioning"
+  log "[$run_id] Stage 2/2: centered-v6 strict differential conditioning"
   python -m doom_learning_v6.conditioning_strict \
+    --model centered-v6 \
     --preflight "$run_root/cue-screen/results.json" \
     --out "$run_root/conditioning-strict"
   write_report "$run_root"
   log "[$run_id] Baseline complete. Report: $run_root/research-report.md"
+}
+
+eligibility_comparison() {
+  local run_id="$1"
+  activate_env
+  assert_runtime_ready
+  local run_root="$RUNS/$run_id"
+  [[ -d "$run_root" ]] || die "Run does not exist: $run_root"
+  [[ -f "$run_root/cue-screen/results.json" ]] || die "Cue preflight missing for run: $run_id"
+  [[ -f "$run_root/conditioning-strict/results.json" ]] || die "Run centered-v6 strict conditioning before Phase-1 comparison"
+  [[ ! -e "$run_root/conditioning-strict-eligibility" ]] || die "Eligibility comparison output already exists"
+  preflight_passed "$run_root/cue-screen/results.json" || die "Cue preflight did not pass; do not compare plasticity yet"
+
+  log "[$run_id] Verifying eligibility-LTD implementation on the prepared runtime"
+  python -m pytest tests/test_doom_learning_v6_eligibility_model.py -q
+  log "[$run_id] Running preregistered eligibility-ltd-v6 on the identical strict protocol"
+  python -m doom_learning_v6.conditioning_strict \
+    --model eligibility-ltd-v6 \
+    --preflight "$run_root/cue-screen/results.json" \
+    --out "$run_root/conditioning-strict-eligibility"
+  write_report "$run_root"
+  log "[$run_id] Phase-1 comparison complete. Report: $run_root/research-report.md"
 }
 
 legacy_replication() {
@@ -183,10 +216,10 @@ legacy_replication() {
 full() {
   local run_id="${1:-$(date -u +'%Y%m%dT%H%M%SZ')}"
   baseline "$run_id"
-  # Historical replication is useful even if the strict preflight blocks; it is
+  # Historical replication is useful even if strict preflight blocks; it is
   # descriptive evidence about the v5->v6 model revision, not a substitute gate.
   legacy_replication "$run_id"
-  log "[$run_id] Full research run complete"
+  log "[$run_id] Full baseline run complete"
 }
 
 usage() {
@@ -195,7 +228,9 @@ Usage:
   bash scripts/snn_research_local.sh bootstrap
   bash scripts/snn_research_local.sh prepare
   bash scripts/snn_research_local.sh smoke
+  bash scripts/snn_research_local.sh runtime-tests
   bash scripts/snn_research_local.sh baseline [run-id]
+  bash scripts/snn_research_local.sh phase1 <run-id>
   bash scripts/snn_research_local.sh legacy <run-id>
   bash scripts/snn_research_local.sh full [run-id]
   bash scripts/snn_research_local.sh report <run-id>
@@ -204,7 +239,10 @@ Usage:
 Recommended first run in WSL2/Ubuntu:
   bash scripts/snn_research_local.sh all first-local
 
-`all` performs bootstrap -> prepare -> smoke -> baseline -> historical replication.
+Then inspect research-report.json. If its status is `strict_learning_gate_failed`, run:
+  bash scripts/snn_research_local.sh phase1 first-local
+
+`all` performs bootstrap -> prepare -> smoke -> runtime-tests -> baseline -> historical replication.
 Large MaleCNS source files are downloaded only when absent and are checksum-verified.
 Experiment output is never overwritten; use a new run-id for each independent run.
 EOF
@@ -215,7 +253,9 @@ case "$command" in
   bootstrap) bootstrap ;;
   prepare) prepare ;;
   smoke) smoke ;;
+  runtime-tests) runtime_tests ;;
   baseline) baseline "${2:-}" ;;
+  phase1) [[ -n "${2:-}" ]] || die "phase1 requires a run-id"; eligibility_comparison "$2" ;;
   legacy) [[ -n "${2:-}" ]] || die "legacy requires a run-id"; legacy_replication "$2" ;;
   full) full "${2:-}" ;;
   report)
@@ -228,6 +268,7 @@ case "$command" in
     bootstrap
     prepare
     smoke
+    runtime_tests
     full "$run_id"
     ;;
   -h|--help|help|'') usage ;;
