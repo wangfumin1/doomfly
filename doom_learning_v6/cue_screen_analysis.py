@@ -3,7 +3,8 @@ import math
 
 
 DEFAULT_CUES = (
-    'blue', 'green', 'white', 'left_blue', 'right_blue', 'vertical', 'horizontal'
+    'blue', 'green', 'white', 'left_blue', 'right_blue', 'vertical', 'horizontal',
+    'checker_a', 'checker_b', 'quadrants_a', 'quadrants_b',
 )
 LEGACY_PAIR = ('left_blue', 'right_blue')
 
