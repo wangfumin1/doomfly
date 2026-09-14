@@ -6,9 +6,14 @@ on:
       - research/snn-baseline
     paths:
       - 'doom_learning_v6/conditioning_analysis.py'
+      - 'doom_learning_v6/conditioning_strict.py'
       - 'doom_learning_v6/conditioning_strict_analysis.py'
+      - 'doom_learning_v6/cue_screen.py'
       - 'doom_learning_v6/cue_screen_analysis.py'
+      - 'doom_learning_v6/eligibility_model.py'
+      - 'doom_learning_v6/model_registry.py'
       - 'doom_learning_v6/research_report.py'
+      - 'scripts/snn_research_local.sh'
       - 'tests/test_doom_learning_v6_conditioning.py'
       - 'tests/test_doom_learning_v6_conditioning_strict.py'
       - 'tests/test_doom_learning_v6_cue_screen.py'
@@ -17,9 +22,14 @@ on:
   pull_request:
     paths:
       - 'doom_learning_v6/conditioning_analysis.py'
+      - 'doom_learning_v6/conditioning_strict.py'
       - 'doom_learning_v6/conditioning_strict_analysis.py'
+      - 'doom_learning_v6/cue_screen.py'
       - 'doom_learning_v6/cue_screen_analysis.py'
+      - 'doom_learning_v6/eligibility_model.py'
+      - 'doom_learning_v6/model_registry.py'
       - 'doom_learning_v6/research_report.py'
+      - 'scripts/snn_research_local.sh'
       - 'tests/test_doom_learning_v6_conditioning.py'
       - 'tests/test_doom_learning_v6_conditioning_strict.py'
       - 'tests/test_doom_learning_v6_cue_screen.py'
@@ -35,6 +45,18 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Syntax check research modules
+        run: >-
+          python -m py_compile
+          doom_learning_v6/conditioning_strict.py
+          doom_learning_v6/conditioning_strict_analysis.py
+          doom_learning_v6/cue_screen.py
+          doom_learning_v6/cue_screen_analysis.py
+          doom_learning_v6/eligibility_model.py
+          doom_learning_v6/model_registry.py
+          doom_learning_v6/research_report.py
+      - name: Syntax check local runner
+        run: bash -n scripts/snn_research_local.sh
       - run: python -m pip install --disable-pip-version-check pytest
       - run: >-
           python -m pytest
