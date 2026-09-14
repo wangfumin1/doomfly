@@ -1,0 +1,27 @@
+name: SNN research smoke tests
+
+on:
+  push:
+    branches:
+      - research/snn-baseline
+    paths:
+      - 'doom_learning_v6/conditioning_analysis.py'
+      - 'tests/test_doom_learning_v6_conditioning.py'
+      - '.github/workflows/snn-research-smoke.yml'
+  pull_request:
+    paths:
+      - 'doom_learning_v6/conditioning_analysis.py'
+      - 'tests/test_doom_learning_v6_conditioning.py'
+      - '.github/workflows/snn-research-smoke.yml'
+
+jobs:
+  conditioning-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install --disable-pip-version-check pytest
+      - run: python -m pytest tests/test_doom_learning_v6_conditioning.py -q
