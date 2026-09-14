@@ -22,8 +22,8 @@ from .conditioning_strict_analysis import (
     schedule_metrics,
 )
 from .model_registry import MODELS, calibrated_brain, model_metadata
+from .stimuli import frame_for
 from doom_learning.common import OUT, capture_provenance, digest, save_json
-from doom_learning_v2.vision import frame_for
 
 
 def _select_cues(preflight_path, cue_a=None, cue_b=None):
