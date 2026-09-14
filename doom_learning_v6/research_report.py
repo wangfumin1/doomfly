@@ -1,10 +1,11 @@
-"""Summarize one local SNN baseline run without importing the neural runtime.
+"""Summarize one local SNN research run without importing the neural runtime.
 
 Expected layout under a run root::
 
     cue-screen/results.json
-    conditioning-replication/results.json       # optional
-    conditioning-strict/results.json            # optional when preflight blocks
+    conditioning-replication/results.json              # optional
+    conditioning-strict/results.json                   # centered-v6
+    conditioning-strict-eligibility/results.json       # optional phase-1 comparison
 
 The summary deliberately separates infrastructure/protocol failures from sensory
 preflight and associative-learning failures. It makes no biological claim.
@@ -42,11 +43,28 @@ def _strict_selectivities(payload):
     return result
 
 
+def _strict_summary(payload):
+    return {
+        'present': payload is not None,
+        'plasticity_model': payload.get('plasticity_model') if payload else None,
+        'cue_names': payload.get('cue_names') if payload else None,
+        'development_gate': payload.get('development_gate') if payload else None,
+        'failed_checks': _failed_checks(payload),
+        'selectivities': _strict_selectivities(payload),
+    }
+
+
+def _has_integrity_failure(payload):
+    markers = ('frozen_unchanged', 'memory_reset_restores', 'dose_matched', 'duration_matched')
+    return any(any(marker in name for marker in markers) for name in _failed_checks(payload))
+
+
 def summarize(root):
     root = Path(root)
     cue = _load(root / 'cue-screen/results.json')
     legacy = _load(root / 'conditioning-replication/results.json')
     strict = _load(root / 'conditioning-strict/results.json')
+    eligibility = _load(root / 'conditioning-strict-eligibility/results.json')
 
     cue_analysis = cue.get('analysis', {}) if cue else {}
     recommended = cue_analysis.get('recommended_pair') if cue else None
@@ -64,13 +82,8 @@ def summarize(root):
             'present': legacy is not None,
             'development_gate': legacy.get('development_gate') if legacy else None,
         },
-        'strict_conditioning': {
-            'present': strict is not None,
-            'cue_names': strict.get('cue_names') if strict else None,
-            'development_gate': strict.get('development_gate') if strict else None,
-            'failed_checks': _failed_checks(strict),
-            'selectivities': _strict_selectivities(strict),
-        },
+        'strict_conditioning': _strict_summary(strict),
+        'eligibility_candidate': _strict_summary(eligibility),
     }
 
     if not cue:
@@ -84,39 +97,75 @@ def summarize(root):
         )
     elif not strict:
         status = 'incomplete'
-        next_step = 'Run strict conditioning using the preflight-selected cue pair.'
+        next_step = 'Run centered-v6 strict conditioning using the preflight-selected cue pair.'
     elif strict.get('development_gate'):
         status = 'strict_gate_passed'
         next_step = (
-            'Freeze parameters and repeat independent runs/cue pairs. Do not tune on Doom '
-            'survival before replication establishes a robust associative effect.'
+            'Freeze centered-v6 parameters and repeat independent cue sets/variants before '
+            'moving to a closed-loop virtual-world task.'
+        )
+    elif _has_integrity_failure(strict):
+        status = 'strict_protocol_or_state_failure'
+        next_step = (
+            'Fix protocol/state integrity before changing the learning rule; the current '
+            'run cannot isolate associative plasticity.'
+        )
+    elif eligibility is None:
+        status = 'strict_learning_gate_failed'
+        next_step = (
+            'Keep sensory encoding and protocol fixed. Run the preregistered '
+            'eligibility-ltd-v6 comparison on the same preflight cue pair.'
+        )
+    elif _has_integrity_failure(eligibility):
+        status = 'eligibility_protocol_or_state_failure'
+        next_step = (
+            'Fix the candidate implementation/state integrity before comparing learning '
+            'mechanisms; do not interpret its conditioning result yet.'
+        )
+    elif eligibility.get('development_gate'):
+        status = 'eligibility_candidate_gate_passed'
+        next_step = (
+            'Freeze eligibility-LTD parameters and replicate across other preflight-ready '
+            'cue pairs/variants before selecting it as the Phase-1 learning mechanism.'
         )
     else:
-        failed = _failed_checks(strict)
-        integrity_markers = ('frozen_unchanged', 'memory_reset_restores', 'dose_matched', 'duration_matched')
-        if any(any(marker in name for marker in integrity_markers) for name in failed):
-            status = 'strict_protocol_or_state_failure'
-            next_step = (
-                'Fix protocol/state integrity before changing the learning rule; the current '
-                'run cannot isolate associative plasticity.'
-            )
-        else:
-            status = 'strict_learning_gate_failed'
-            next_step = (
-                'Keep the sensory pair and protocol fixed; next compare the current centered '
-                'rule against an explicit three-factor/reward-modulated eligibility rule.'
-            )
+        status = 'registered_rules_failed'
+        next_step = (
+            'Both preregistered mechanisms failed the same controlled assay. Preserve this '
+            'negative result and implement the next explicit local three-factor candidate '
+            'without changing the sensory pair or protocol.'
+        )
 
     summary['status'] = status
     summary['recommended_next_step'] = next_step
     return summary
 
 
+def _append_model(lines, title, payload):
+    lines.extend([
+        '',
+        f'## {title}',
+        '',
+        f"- Present: `{payload['present']}`",
+        f"- Model: `{payload['plasticity_model']}`",
+        f"- Development gate: `{payload['development_gate']}`",
+    ])
+    if payload.get('failed_checks'):
+        lines.append('- Failed checks:')
+        lines.extend(f"  - `{name}`" for name in payload['failed_checks'])
+    if payload.get('selectivities'):
+        lines.append('- Selectivity:')
+        for row in payload['selectivities']:
+            lines.append(
+                '  - CS+ cue {plus}: paired={paired}, unpaired={unpaired}, '
+                'frozen={frozen}, no-US={no_imposed_US}'.format(**row)
+            )
+
+
 def markdown(summary):
     cue = summary['cue_screen']
-    strict = summary['strict_conditioning']
     lines = [
-        '# SNN baseline run report',
+        '# SNN research run report',
         '',
         f"- Status: `{summary['status']}`",
         f"- Cue preflight passed: `{cue['passed']}`",
@@ -125,20 +174,8 @@ def markdown(summary):
     pair = cue.get('recommended_pair')
     if pair:
         lines.append(f"- Recommended cue pair: `{pair.get('cue_a')}` / `{pair.get('cue_b')}`")
-    lines.extend([
-        f"- Strict conditioning present: `{strict['present']}`",
-        f"- Strict development gate: `{strict['development_gate']}`",
-    ])
-    if strict.get('failed_checks'):
-        lines.append('- Failed strict checks:')
-        lines.extend(f"  - `{name}`" for name in strict['failed_checks'])
-    if strict.get('selectivities'):
-        lines.extend(['', '## Selectivity'])
-        for row in strict['selectivities']:
-            lines.append(
-                '- CS+ cue {plus}: paired={paired}, unpaired={unpaired}, '
-                'frozen={frozen}, no-US={no_imposed_US}'.format(**row)
-            )
+    _append_model(lines, 'Centered v6 strict conditioning', summary['strict_conditioning'])
+    _append_model(lines, 'Eligibility-LTD v6 comparison', summary['eligibility_candidate'])
     lines.extend([
         '',
         '## Next step',
