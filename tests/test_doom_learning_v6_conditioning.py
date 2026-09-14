@@ -1,4 +1,4 @@
-from doom_learning_v6.conditioning import CONDITIONS, evaluate_rows
+from doom_learning_v6.conditioning_analysis import CONDITIONS, evaluate_rows
 
 
 def row(plus, condition, selectivity=0.0, *, dose=800, unchanged=True, reset=True):
