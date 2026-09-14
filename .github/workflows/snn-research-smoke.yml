@@ -13,6 +13,7 @@ on:
       - 'doom_learning_v6/eligibility_model.py'
       - 'doom_learning_v6/model_registry.py'
       - 'doom_learning_v6/research_report.py'
+      - 'doom_learning_v6/stimuli.py'
       - 'scripts/snn_research_local.sh'
       - 'tests/test_doom_learning_v6_conditioning.py'
       - 'tests/test_doom_learning_v6_conditioning_strict.py'
@@ -29,6 +30,7 @@ on:
       - 'doom_learning_v6/eligibility_model.py'
       - 'doom_learning_v6/model_registry.py'
       - 'doom_learning_v6/research_report.py'
+      - 'doom_learning_v6/stimuli.py'
       - 'scripts/snn_research_local.sh'
       - 'tests/test_doom_learning_v6_conditioning.py'
       - 'tests/test_doom_learning_v6_conditioning_strict.py'
@@ -55,6 +57,7 @@ jobs:
           doom_learning_v6/eligibility_model.py
           doom_learning_v6/model_registry.py
           doom_learning_v6/research_report.py
+          doom_learning_v6/stimuli.py
       - name: Syntax check local runner
         run: bash -n scripts/snn_research_local.sh
       - run: python -m pip install --disable-pip-version-check pytest
