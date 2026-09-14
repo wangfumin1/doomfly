@@ -11,8 +11,8 @@ import numpy as np
 
 from .calibration import calibrated_brain
 from .cue_screen_analysis import DEFAULT_CUES, analyze_cues
+from .stimuli import frame_for, pixel_energy
 from doom_learning.common import OUT, capture_provenance, digest, save_json
-from doom_learning_v2.vision import frame_for
 
 
 def run(out, *, maximum_activity_ratio=2.0):
@@ -50,6 +50,7 @@ def run(out, *, maximum_activity_ratio=2.0):
             'R8': int(counts[b.r8].sum()),
             'KC_pattern_sha256': digest(counts[b.circuit['kc']]),
             'input_sha256': digest(cue),
+            'pixel_energy': pixel_energy(label),
         }
         rows.append(row)
         save_json(out / f'{label}.json', row)
@@ -68,7 +69,9 @@ def run(out, *, maximum_activity_ratio=2.0):
         'status': (
             'Visual preflight only. Passing means at least one candidate pair is '
             'activity-balanced and distinguishable at KC/MBON readout; it does not '
-            'establish associative learning or biological visual validity.'
+            'establish associative learning or biological visual validity. The new '
+            'checker/quadrant cue families are pixel-energy matched by construction, '
+            'but still require neural activity balance here.'
         ),
     }
     save_json(out / 'results.json', result)
