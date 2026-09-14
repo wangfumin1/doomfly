@@ -43,6 +43,9 @@ tools/acc/
 *.jsonl.*
 outputs/**/*.gz
 outputs/**/checkpoints/
+# Local controlled research runs can contain large per-tick traces. Historical
+# compact outputs already tracked elsewhere remain unaffected.
+outputs/doom-learning/research-runs/
 _vizdoom.ini
 
 # Separately commissioned social banners
