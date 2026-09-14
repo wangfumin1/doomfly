@@ -99,9 +99,15 @@ OPENBLAS_NUM_THREADS=1 python -m doom_learning_v6.cue_screen \
   --out outputs/doom-learning/physiology-v6/cue-screen-run1
 ```
 
-The screen probes `blue`, `green`, `white`, `left_blue`, `right_blue`, `vertical`
-and `horizontal` after the same dark warmup used by the conditioning readout. A
-candidate pair is eligible only when:
+The screen includes the legacy/color candidates (`blue`, `green`, `white`,
+`left_blue`, `right_blue`, `vertical`, `horizontal`) plus two deliberately
+energy-matched spatial families: `checker_a`/`checker_b` and
+`quadrants_a`/`quadrants_b`. Within each new pair, RGB values and illuminated
+pixel counts are identical; only spatial arrangement changes. This controls the
+input image but does **not** assume equal neural drive, so every pair still has to
+pass the KC balance gate.
+
+A candidate pair is eligible only when:
 
 - both KC response patterns differ from the black control;
 - the two KC response patterns differ from each other;
