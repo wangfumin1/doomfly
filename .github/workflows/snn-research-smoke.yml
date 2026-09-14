@@ -6,16 +6,20 @@ on:
       - research/snn-baseline
     paths:
       - 'doom_learning_v6/conditioning_analysis.py'
+      - 'doom_learning_v6/cue_screen_analysis.py'
       - 'tests/test_doom_learning_v6_conditioning.py'
+      - 'tests/test_doom_learning_v6_cue_screen.py'
       - '.github/workflows/snn-research-smoke.yml'
   pull_request:
     paths:
       - 'doom_learning_v6/conditioning_analysis.py'
+      - 'doom_learning_v6/cue_screen_analysis.py'
       - 'tests/test_doom_learning_v6_conditioning.py'
+      - 'tests/test_doom_learning_v6_cue_screen.py'
       - '.github/workflows/snn-research-smoke.yml'
 
 jobs:
-  conditioning-gate:
+  research-gates:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -24,4 +28,8 @@ jobs:
         with:
           python-version: '3.11'
       - run: python -m pip install --disable-pip-version-check pytest
-      - run: python -m pytest tests/test_doom_learning_v6_conditioning.py -q
+      - run: >-
+          python -m pytest
+          tests/test_doom_learning_v6_conditioning.py
+          tests/test_doom_learning_v6_cue_screen.py
+          -q
