@@ -8,18 +8,22 @@ on:
       - 'doom_learning_v6/conditioning_analysis.py'
       - 'doom_learning_v6/conditioning_strict_analysis.py'
       - 'doom_learning_v6/cue_screen_analysis.py'
+      - 'doom_learning_v6/research_report.py'
       - 'tests/test_doom_learning_v6_conditioning.py'
       - 'tests/test_doom_learning_v6_conditioning_strict.py'
       - 'tests/test_doom_learning_v6_cue_screen.py'
+      - 'tests/test_doom_learning_v6_research_report.py'
       - '.github/workflows/snn-research-smoke.yml'
   pull_request:
     paths:
       - 'doom_learning_v6/conditioning_analysis.py'
       - 'doom_learning_v6/conditioning_strict_analysis.py'
       - 'doom_learning_v6/cue_screen_analysis.py'
+      - 'doom_learning_v6/research_report.py'
       - 'tests/test_doom_learning_v6_conditioning.py'
       - 'tests/test_doom_learning_v6_conditioning_strict.py'
       - 'tests/test_doom_learning_v6_cue_screen.py'
+      - 'tests/test_doom_learning_v6_research_report.py'
       - '.github/workflows/snn-research-smoke.yml'
 
 jobs:
@@ -37,4 +41,5 @@ jobs:
           tests/test_doom_learning_v6_conditioning.py
           tests/test_doom_learning_v6_conditioning_strict.py
           tests/test_doom_learning_v6_cue_screen.py
+          tests/test_doom_learning_v6_research_report.py
           -q
