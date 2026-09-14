@@ -14,8 +14,6 @@ from pathlib import Path
 
 import numpy as np
 
-from .brain import PARAMETERS
-from .calibration import calibrated_brain
 from .conditioning_strict_analysis import (
     CONDITIONS,
     build_schedule,
@@ -23,6 +21,7 @@ from .conditioning_strict_analysis import (
     protocol_integrity,
     schedule_metrics,
 )
+from .model_registry import MODELS, calibrated_brain, model_metadata
 from doom_learning.common import OUT, capture_provenance, digest, save_json
 from doom_learning_v2.vision import frame_for
 
@@ -48,10 +47,21 @@ def _select_cues(preflight_path, cue_a=None, cue_b=None):
     return (cue_a, cue_b), pair, hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def run(out, preflight, *, eta=.001, us_current=4.0, cue_a=None, cue_b=None):
+def run(
+    out,
+    preflight,
+    *,
+    eta=.001,
+    us_current=4.0,
+    cue_a=None,
+    cue_b=None,
+    model='centered-v6',
+):
     out = Path(out)
     if out.exists():
         raise ValueError('Fresh output path required')
+    if model not in MODELS:
+        raise ValueError(f'Unknown model: {model}')
     cues, pair_metrics, preflight_sha256 = _select_cues(preflight, cue_a, cue_b)
     integrity = protocol_integrity()
     if not integrity['passed']:
@@ -59,10 +69,10 @@ def run(out, preflight, *, eta=.001, us_current=4.0, cue_a=None, cue_b=None):
 
     out.mkdir(parents=True)
     capture_provenance(out, additional=['doom_learning_v2', 'doom_learning_v6'])
+    model_info = model_metadata(model)
     protocol = {
-        'model': 'adaptive-centered-v6',
+        'model': model_info,
         'eta': eta,
-        'parameters': PARAMETERS,
         'cue_names': list(cues),
         'conditions': list(CONDITIONS),
         'US_current': us_current,
@@ -89,7 +99,7 @@ def run(out, preflight, *, eta=.001, us_current=4.0, cue_a=None, cue_b=None):
     }
     save_json(out / 'protocol.json', protocol)
 
-    b = calibrated_brain(eta)
+    b = calibrated_brain(model, eta)
     save_json(out / 'calibration.json', b.calibration)
     frames = [frame_for(cues[0]), frame_for(cues[1])]
     dark = frame_for('black')
@@ -181,6 +191,7 @@ def run(out, preflight, *, eta=.001, us_current=4.0, cue_a=None, cue_b=None):
                 'plus': plus,
                 'condition': condition,
                 'cue_names': list(cues),
+                'plasticity_model': model,
                 'before': before,
                 'after': after,
                 'erased': erased,
@@ -217,6 +228,8 @@ def run(out, preflight, *, eta=.001, us_current=4.0, cue_a=None, cue_b=None):
     evaluation = evaluate_rows(rows)
     results = {
         'complete': True,
+        'plasticity_model': model,
+        'model_metadata': model_info,
         'cue_names': list(cues),
         'preflight_sha256': preflight_sha256,
         **evaluation,
@@ -237,6 +250,7 @@ if __name__ == '__main__':
     parser.add_argument('--us-current', type=float, default=4.0)
     parser.add_argument('--cue-a')
     parser.add_argument('--cue-b')
+    parser.add_argument('--model', choices=MODELS, default='centered-v6')
     args = parser.parse_args()
     run(
         args.out,
@@ -245,4 +259,5 @@ if __name__ == '__main__':
         us_current=args.us_current,
         cue_a=args.cue_a,
         cue_b=args.cue_b,
+        model=args.model,
     )
